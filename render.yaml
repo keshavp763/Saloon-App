@@ -25,7 +25,7 @@ services:
     # rootDir: web-admin        # <- uncomment ONLY if this file sits above the web-admin folder
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
-    autoDeploy: true
+    autoDeploy: false           # storage repo == code repo, so don't redeploy on every salon change
     envVars:
       # --- Dashboard login (you set these) ---
       - key: ADMIN_PASSWORD
@@ -41,7 +41,7 @@ services:
       - key: GITHUB_TOKEN
         sync: false                 # a GitHub personal access token with repo write
       - key: GITHUB_REPO
-        sync: false                 # e.g. yourname/salon-licenses
+        value: keshavp763/Saloon-App
       - key: GITHUB_BRANCH
         value: main
       - key: SALONS_PATH
