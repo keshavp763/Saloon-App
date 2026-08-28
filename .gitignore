@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Local data cache — real salon list lives in your GitHub storage repo, not here
+data/
+
+# Secrets — NEVER commit these
+*.env
+.env
+*private*key*
+vendor_private_key.json

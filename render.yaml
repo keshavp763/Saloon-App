@@ -1,0 +1,67 @@
+# Render Blueprint for the Salon Manager master admin panel.
+#
+# HOW TO USE
+#   1. Push this `web-admin` folder to a GitHub repo (this file at the repo root).
+#      -> If you instead push the whole `salon-manager-desktop` folder, move this
+#         render.yaml to that folder's root and uncomment `rootDir: web-admin` below.
+#   2. On https://render.com -> New -> Blueprint -> pick that repo. Render reads
+#      this file and creates the service.
+#   3. Render will PROMPT you for every value marked `sync: false` below
+#      (they're secrets, so they are NOT stored in git). Paste them in.
+#   4. Deploy. Your panel is at https://<name>.onrender.com
+#      and the signed feed the tablets read is https://<name>.onrender.com/licenses.json
+#
+# PERSISTENCE
+#   Salon data is stored in YOUR GitHub repo (GITHUB_* vars below), so it survives
+#   free-tier restarts and redeploys with no paid disk needed. DATA_FILE is only a
+#   local cache. (If you'd rather use a paid Render disk instead of GitHub, see the
+#   commented `disk:` block at the bottom.)
+
+services:
+  - type: web
+    name: salon-master-panel
+    runtime: python
+    plan: free
+    # rootDir: web-admin        # <- uncomment ONLY if this file sits above the web-admin folder
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    autoDeploy: true
+    envVars:
+      # --- Dashboard login (you set these) ---
+      - key: ADMIN_PASSWORD
+        sync: false                 # Render prompts you — pick a strong password
+      - key: SECRET_KEY
+        generateValue: true         # Render auto-generates a long random value
+
+      # --- Your licence signing key (paste contents of tools/vendor_private_key.json) ---
+      - key: VENDOR_PRIVATE_KEY
+        sync: false                 # e.g. {"n":"…","e":65537,"d":"…"}
+
+      # --- GitHub-backed storage (so the free tier never loses data) ---
+      - key: GITHUB_TOKEN
+        sync: false                 # a GitHub personal access token with repo write
+      - key: GITHUB_REPO
+        sync: false                 # e.g. yourname/salon-licenses
+      - key: GITHUB_BRANCH
+        value: main
+      - key: SALONS_PATH
+        value: salons.json
+      - key: LICENSES_PATH
+        value: licenses.json
+
+      # --- Behaviour ---
+      - key: REMINDER_DAYS
+        value: "30"                 # "Expiring" banner starts this many days before end
+      - key: DATA_FILE
+        value: /tmp/salons.json     # local cache only; real data lives in GitHub
+      - key: PYTHON_VERSION
+        value: "3.12"
+
+# --- OPTIONAL: use a paid Render disk instead of GitHub for storage ---
+# Requires a paid plan (free instances can't mount disks). If you use this,
+# set DATA_FILE to /var/data/salons.json above and you can leave GITHUB_* blank.
+#
+#    disk:
+#      name: salon-data
+#      mountPath: /var/data
+#      sizeGB: 1
