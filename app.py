@@ -317,13 +317,17 @@ def dashboard():
 @app.route("/add", methods=["POST"])
 @login_required
 def add():
-    email = (request.form.get("email") or "").strip()
+    # Accept a plain Client ID (what the tablet sends) or a Google email — both
+    # are hashed to the same fingerprint the app computes, so either works.
+    ident = (request.form.get("identifier")
+             or request.form.get("email") or "").strip()
     name = (request.form.get("name") or "").strip()
     expiry = (request.form.get("expiry") or "").strip()
-    if name and valid_email(email) and valid_date(expiry):
+    if name and ident and valid_date(expiry):
         salons = load_salons()
-        # Store only the one-way fingerprint of the email, never the address.
-        salons[email_hash(email)] = {"name": name, "active": True,
+        # Store only the one-way fingerprint of the identifier, never the raw
+        # value. email_hash lower-cases + trims, matching salon/licensing.py.
+        salons[email_hash(ident)] = {"name": name, "active": True,
                                      "expiry": expiry}
         save_salons(salons)
     return redirect(url_for("dashboard"))
@@ -476,19 +480,20 @@ can't be verified yet. Set VENDOR_PRIVATE_KEY on the server.</div>{% endif %}
 <div class=row>
 <input type=text name=name placeholder="Salon name" required
  style="flex:1 1 160px">
-<input type=email name=email placeholder="Owner's Google email" required
- style="flex:1 1 200px">
+<input type=text name=identifier placeholder="Client ID (e.g. Fabulook2026)"
+ required style="flex:1 1 200px">
 <input type=date name=expiry required>
 <button class="btn p">Add</button></div>
-<div class=hint>Enter the exact Gmail the owner signs the app in with. It's
-stored only as a private fingerprint — the email itself is never saved or
-shown.</div></form></details>
+<div class=hint>Enter the Client ID you set on the tablet (Settings → Set Client
+ID). Case-insensitive. It's stored only as a private fingerprint. You can also
+paste a Google email here instead if a salon activates with an account.</div>
+</form></details>
 
 {% for r in rows %}
 <div class=card>
 <div class=top>
 <div><div class=nm>{{r.name or '(unnamed)'}}</div>
-<div class=id>Google account · fingerprint {{r.id[:8]}}</div></div>
+<div class=id>Client ID · fingerprint {{r.id[:8]}}</div></div>
 <span class="pill {{r.status}}">
 {% if r.status=='active' %}Active · {{r.days}}d
 {% elif r.status=='expiring' %}Expires in {{r.days}}d

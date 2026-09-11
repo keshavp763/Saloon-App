@@ -66,11 +66,23 @@ def test_toggle_and_renew(client):
     assert "2100-06-01" in body and "Switch off" in body  # renew re-enables
 
 
-def test_bad_email_rejected(client):
+def test_blank_identifier_rejected(client):
+    # A Client ID (or email) is now accepted, but a blank identifier must not
+    # create an entry.
     _login(client)
-    client.post("/add", data={"email": "notanemail", "name": "Bad",
+    client.post("/add", data={"identifier": "  ", "name": "Bad",
                               "expiry": "2099-01-01"})
     assert "Bad" not in client.get("/").get_data(as_text=True)
+
+
+def test_plain_client_id_accepted(client):
+    from salon import licensing as lic
+    _login(client)
+    client.post("/add", data={"identifier": "Fabulook2026", "name": "Fabulook",
+                              "expiry": "2099-01-01"})
+    data = lic.parse_registry(client.get("/licenses.json").get_data())
+    # The tablet hashes its Client ID the same way, case-insensitively.
+    assert lic.email_hash("fabulook2026") in data
 
 
 def test_signed_feed_verifies_with_app_key(client):
