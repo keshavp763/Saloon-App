@@ -85,6 +85,19 @@ def test_plain_client_id_accepted(client):
     assert lic.email_hash("fabulook2026") in data
 
 
+def test_client_id_shown_but_email_not(client):
+    _login(client)
+    # A plain Client ID is readable on the dashboard…
+    client.post("/add", data={"identifier": "Fabulook2026", "name": "Fab",
+                              "expiry": "2099-01-01"})
+    # …an email identifier is kept as a fingerprint only, never displayed.
+    client.post("/add", data={"identifier": "owner@gmail.com", "name": "Mail",
+                              "expiry": "2099-01-01"})
+    body = client.get("/").get_data(as_text=True)
+    assert "Fabulook2026" in body
+    assert "owner@gmail.com" not in body
+
+
 def test_signed_feed_verifies_with_app_key(client):
     from salon import licensing as lic
     _login(client)

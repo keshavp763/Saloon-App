@@ -304,6 +304,7 @@ def dashboard():
     for sid, s in sorted(salons.items(), key=lambda kv: kv[1].get("name", "")):
         label, days = status_of(s, today)
         rows.append({"id": sid, "name": s.get("name", ""),
+                     "client_id": s.get("client_id", ""),
                      "expiry": s.get("expiry", ""), "active": s.get("active"),
                      "status": label, "days": days})
     counts = {k: sum(1 for r in rows if r["status"] == k)
@@ -325,10 +326,15 @@ def add():
     expiry = (request.form.get("expiry") or "").strip()
     if name and ident and valid_date(expiry):
         salons = load_salons()
-        # Store only the one-way fingerprint of the identifier, never the raw
-        # value. email_hash lower-cases + trims, matching salon/licensing.py.
-        salons[email_hash(ident)] = {"name": name, "active": True,
-                                     "expiry": expiry}
+        # The licence key is the one-way fingerprint of the identifier, never
+        # the raw value (email_hash lower-cases + trims, matching
+        # salon/licensing.py). A plain Client ID is NOT sensitive, so we also
+        # keep it in the clear so the dashboard can show it — but an email is
+        # kept as a fingerprint only, never stored or displayed.
+        entry = {"name": name, "active": True, "expiry": expiry}
+        if not valid_email(ident):
+            entry["client_id"] = ident
+        salons[email_hash(ident)] = entry
         save_salons(salons)
     return redirect(url_for("dashboard"))
 
@@ -493,7 +499,8 @@ paste a Google email here instead if a salon activates with an account.</div>
 <div class=card>
 <div class=top>
 <div><div class=nm>{{r.name or '(unnamed)'}}</div>
-<div class=id>Client ID · fingerprint {{r.id[:8]}}</div></div>
+<div class=id>{% if r.client_id %}Client ID · {{r.client_id}}{% else %}Client ID ·
+fingerprint {{r.id[:8]}}{% endif %}</div></div>
 <span class="pill {{r.status}}">
 {% if r.status=='active' %}Active · {{r.days}}d
 {% elif r.status=='expiring' %}Expires in {{r.days}}d
